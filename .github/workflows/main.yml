@@ -19,7 +19,7 @@ jobs:
           cache: true
       - name: Générer le projet Android
         run: flutter create --platforms=android --org com.lunikapp --project-name tri_photos .
-      - name: Config Android (permissions, sans Internet, minSdk, nom)
+      - name: Config Android (permissions, sans Internet, minSdk, sans R8)
         run: |
           python3 - <<'EOF'
           import os, re
@@ -41,6 +41,10 @@ jobs:
               if os.path.exists(g):
                   t = open(g, encoding='utf-8').read()
                   t = t.replace('flutter.minSdkVersion', '24')
+                  if g.endswith('.kts'):
+                      t = t.replace('release {', 'release {\n            isMinifyEnabled = false\n            isShrinkResources = false', 1)
+                  else:
+                      t = t.replace('release {', 'release {\n            minifyEnabled false\n            shrinkResources false', 1)
                   open(g, 'w', encoding='utf-8').write(t)
           EOF
       - run: flutter pub get
