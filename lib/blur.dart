@@ -1,29 +1,15 @@
-import 'dart:io';
 import 'dart:typed_data';
-import 'dart:ui' as ui;
+import 'thumb.dart';
 
 const kBlurry = 'Floues';
 const double _threshold = 20; // plus petit = plus tolérant
 const _checked = ['.jpg', '.jpeg', '.heic', '.heif'];
 
-Future<bool> isBlurry(File f) async {
-  final low = f.path.toLowerCase();
+bool isBlurry(String path, Thumb t) {
+  final low = path.toLowerCase();
   if (!_checked.any(low.endsWith)) return false;
-  try {
-    final bytes = await f.readAsBytes();
-    final codec = await ui.instantiateImageCodec(bytes, targetWidth: 320);
-    final frame = await codec.getNextFrame();
-    final img = frame.image;
-    final w = img.width, h = img.height;
-    final data = await img.toByteData(format: ui.ImageByteFormat.rawRgba);
-    img.dispose();
-    codec.dispose();
-    if (data == null || w < 8 || h < 8) return false;
-    final px = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
-    return _laplacianVariance(px, w, h) < _threshold;
-  } catch (_) {
-    return false;
-  }
+  if (t.width < 8 || t.height < 8) return false;
+  return _laplacianVariance(t.rgba, t.width, t.height) < _threshold;
 }
 
 double _laplacianVariance(Uint8List px, int w, int h) {
