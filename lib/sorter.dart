@@ -5,6 +5,7 @@ import 'blur.dart';
 import 'classifier.dart';
 import 'dupes.dart';
 import 'scanner.dart';
+import 'thumb.dart';
 
 enum SortStep { scanning, duplicates, analysing, results }
 
@@ -62,10 +63,11 @@ class SortJob extends ChangeNotifier {
     final clf = Classifier();
     for (final f in rest) {
       if (_stop || _disposed) break;
+      final t = await loadThumb(f);
       final String cat;
-      if (await adult.isAdult(f)) {
+      if (t != null && await adult.isAdult(t)) {
         cat = kAdults;
-      } else if (await isBlurry(f)) {
+      } else if (t != null && isBlurry(f.path, t)) {
         cat = kBlurry;
       } else {
         cat = await clf.classify(f);
@@ -75,8 +77,10 @@ class SortJob extends ChangeNotifier {
       if (done % 5 == 0 || done == total) _tick();
     }
     await clf.close();
+    final notes = _notes(adult, clf);
+    adult.close();
     if (_disposed) return;
-    warning = _notes(adult, clf);
+    warning = notes;
     step = SortStep.results;
     _tick();
   }
