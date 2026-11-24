@@ -81,16 +81,21 @@ class SortJob extends ChangeNotifier {
     _tick();
   }
 
+  String _cut(String s, int n) => s.length > n ? s.substring(0, n) : s;
+
   String? _notes(AdultDetector adult, Classifier clf) {
     final notes = <String>[];
     if (!adult.ready) {
       notes.add(
-          'Détection « Adultes » indisponible : ces photos sont rangées par contenu.');
+          'Détection « Adultes » indisponible : ${_cut(adult.lastError ?? '', 150)}');
+    }
+    if (adult.errors > 0) {
+      notes.add(
+          '${adult.errors} photos non lues (adultes). ${_cut(adult.lastError ?? '', 200)}');
     }
     if (clf.errors > 0) {
-      final e = clf.lastError ?? '';
-      final short = e.length > 80 ? e.substring(0, 80) : e;
-      notes.add('${clf.errors} photos non lues par l\'analyse. $short');
+      notes.add(
+          '${clf.errors} photos non lues (analyse). ${_cut(clf.lastError ?? '', 450)}');
     }
     final top = clf.unmatched.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
