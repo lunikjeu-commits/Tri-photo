@@ -19,16 +19,20 @@ jobs:
           cache: true
       - name: Générer le projet Android
         run: flutter create --platforms=android --org com.lunikapp --project-name tri_photos .
-      - name: Config Android (permissions, minSdk, nom)
+      - name: Config Android (permissions, sans Internet, minSdk, nom)
         run: |
           python3 - <<'EOF'
           import os, re
           p = 'android/app/src/main/AndroidManifest.xml'
           s = open(p, encoding='utf-8').read()
+          if 'xmlns:tools' not in s:
+              s = s.replace('<manifest ',
+                  '<manifest xmlns:tools="http://schemas.android.com/tools" ', 1)
           perms = ''.join(
               f'\n    <uses-permission android:name="android.permission.{x}"/>'
               for x in ['MANAGE_EXTERNAL_STORAGE', 'READ_MEDIA_IMAGES',
                         'READ_EXTERNAL_STORAGE', 'WRITE_EXTERNAL_STORAGE'])
+          perms += '\n    <uses-permission android:name="android.permission.INTERNET" tools:node="remove"/>'
           i = s.index('>', s.index('<manifest')) + 1
           s = s[:i] + perms + s[i:]
           s = re.sub(r'android:label="[^"]*"', 'android:label="Tri Photos"', s)
@@ -41,6 +45,15 @@ jobs:
           EOF
       - run: flutter pub get
       - run: flutter build apk --release
+      - name: Vérifier qu'il n'y a aucun accès Internet
+        run: |
+          F=$(find build -path '*merged_manifests*' -path '*release*' -name AndroidManifest.xml | head -1)
+          if [ -z "$F" ]; then echo "Manifest fusionné introuvable (contrôle ignoré)"; exit 0; fi
+          echo "Contrôle : $F"
+          if grep -q 'android.permission.INTERNET' "$F"; then
+            echo "ERREUR : permission INTERNET présente"; exit 1
+          fi
+          echo "OK : aucune permission Internet"
       - uses: actions/upload-artifact@v4
         with:
           name: tri-photos-apk
