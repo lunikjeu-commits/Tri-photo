@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'adult.dart';
 import 'blur.dart';
 import 'categories.dart';
 import 'dupes.dart';
@@ -20,6 +21,7 @@ const _icons = <String, IconData>{
   kToCheck: Icons.help_outline_rounded,
   kDuplicates: Icons.content_copy_rounded,
   kBlurry: Icons.blur_on_rounded,
+  kAdults: Icons.visibility_off_rounded,
 };
 
 class SortScreen extends StatefulWidget {
@@ -175,6 +177,12 @@ class _SortScreenState extends State<SortScreen> {
         const SizedBox(height: 4),
         const Text('Désactive un dossier pour ne pas déplacer ses photos',
             style: TextStyle(color: AppColors.textDim, fontSize: 13)),
+        if (_job.warning != null) ...[
+          const SizedBox(height: 6),
+          Text(_job.warning!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Color(0xFFFFB74D), fontSize: 13)),
+        ],
         const SizedBox(height: 14),
         Expanded(
           child: ListView(
