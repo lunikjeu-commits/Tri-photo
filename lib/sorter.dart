@@ -1,6 +1,6 @@
-
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'adult.dart';
 import 'blur.dart';
 import 'classifier.dart';
 import 'dupes.dart';
@@ -14,6 +14,7 @@ class SortJob extends ChangeNotifier {
 
   SortStep step = SortStep.scanning;
   int done = 0, total = 0;
+  String? warning;
   bool _stop = false;
   bool _disposed = false;
   final Map<String, List<File>> plan = {};
@@ -56,10 +57,23 @@ class SortJob extends ChangeNotifier {
     final rest = files.where((f) => !copySet.contains(f.path)).toList();
 
     _begin(SortStep.analysing, rest.length);
+    final adult = AdultDetector();
+    await adult.init();
+    if (!adult.ready) {
+      warning =
+          'Détection « Adultes » indisponible : ces photos sont rangées par contenu.';
+    }
     final clf = Classifier();
     for (final f in rest) {
       if (_stop || _disposed) break;
-      final cat = await isBlurry(f) ? kBlurry : await clf.classify(f);
+      final String cat;
+      if (await adult.isAdult(f)) {
+        cat = kAdults;
+      } else if (await isBlurry(f)) {
+        cat = kBlurry;
+      } else {
+        cat = await clf.classify(f);
+      }
       plan.putIfAbsent(cat, () => []).add(f);
       done++;
       if (done % 5 == 0 || done == total) _tick();
