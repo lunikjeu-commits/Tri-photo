@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/services.dart';
 import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
 import 'categories.dart';
 
@@ -25,7 +26,9 @@ class Classifier {
       return cat;
     } catch (e) {
       errors++;
-      lastError ??= e.toString();
+      lastError ??= e is PlatformException
+          ? '${e.code} ${e.message}\n${e.details ?? ''}\n${e.stacktrace ?? ''}'
+          : e.toString();
       return kToCheck;
     }
   }
