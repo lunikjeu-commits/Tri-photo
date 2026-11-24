@@ -20,7 +20,10 @@ const Map<String, Set<String>> kCategories = {
   'Moteurs': {
     'engine', 'cylinder', 'piston', 'turbo', 'turbocharger', 'exhaust',
     'radiator', 'machinery', 'mechanic', 'mechanical', 'gear', 'crankshaft',
-    'transmission', 'carburetor', 'compressor',
+    'transmission', 'carburetor', 'compressor', 'part', 'parts', 'spare',
+    'engineering', 'machine', 'metal', 'steel', 'pipe', 'tube', 'hose', 'gas',
+    'manifold', 'injector', 'intake', 'pulley', 'belt', 'bolt', 'gasket',
+    'valve', 'camshaft', 'alternator', 'supercharger', 'intercooler',
   },
   'Alimentation': {
     'food', 'foods', 'dish', 'cuisine', 'meal', 'ingredient', 'recipe',
