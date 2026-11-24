@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'theme.dart';
+import 'ui_sort.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -11,6 +12,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _granted = false;
+  bool _includeChats = false;
 
   @override
   void initState() {
@@ -38,6 +40,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _ask() async {
     await Permission.manageExternalStorage.request();
     await _check();
+  }
+
+  void _openSort() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+          builder: (_) => SortScreen(includeChats: _includeChats)),
+    );
   }
 
   void _about() {
@@ -68,14 +78,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             padding: const EdgeInsets.all(20),
             children: [
               _statusCard(),
+              const SizedBox(height: 12),
+              _chatsOption(),
               const SizedBox(height: 16),
               SizedBox(
                 height: 56,
                 child: FilledButton.icon(
-                  onPressed: _granted
-                      ? () => ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Analyse : étape 2')))
-                      : _ask,
+                  onPressed: _granted ? _openSort : _ask,
                   icon: Icon(_granted
                       ? Icons.auto_awesome_rounded
                       : Icons.lock_open_rounded),
@@ -91,15 +100,34 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       fontWeight: FontWeight.w600,
                       letterSpacing: 1)),
               const SizedBox(height: 12),
-              const _Feature(Icons.category_rounded, 'Tri par contenu',
-                  'Voitures, nourriture, paysages, documents…'),
-              const _Feature(Icons.content_copy_rounded, 'Doublons et flous',
-                  'Rangés à part, rien n\'est supprimé'),
-              const _Feature(Icons.visibility_rounded, 'Aperçu avant déplacement',
-                  'Tu valides, puis tu peux annuler'),
+              const _Feature(Icons.lock_outline_rounded, 'Dossier privé',
+                  'Masqué de la galerie, visible dans l\'app'),
+              const _Feature(Icons.undo_rounded, 'Annuler le dernier tri',
+                  'Remet les photos à leur place'),
+              const _Feature(Icons.tune_rounded, 'Dossiers personnalisés',
+                  'Tu choisis les catégories'),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _chatsOption() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: SwitchListTile(
+        value: _includeChats,
+        onChanged: (v) => setState(() => _includeChats = v),
+        title: const Text('Inclure WhatsApp et Telegram',
+            style:
+                TextStyle(color: AppColors.text, fontWeight: FontWeight.w600)),
+        subtitle: const Text(
+            'Attention : les photos déplacées disparaissent des conversations.',
+            style: TextStyle(color: AppColors.textDim, fontSize: 13)),
       ),
     );
   }
