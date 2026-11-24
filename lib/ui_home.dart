@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'theme.dart';
+import 'ui_private.dart';
 import 'ui_sort.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -50,6 +51,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
+  void _openPrivate() {
+    Navigator.push(
+        context, MaterialPageRoute(builder: (_) => const PrivateScreen()));
+  }
+
   void _about() {
     showAboutDialog(
       context: context,
@@ -93,15 +99,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       : 'Autoriser l\'accès aux fichiers'),
                 ),
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 20),
+              if (_granted)
+                _Feature(Icons.visibility_off_rounded, 'Dossier privé',
+                    'Voir le dossier « Adultes » (masqué de la galerie)',
+                    onTap: _openPrivate),
+              const SizedBox(height: 18),
               const Text('Bientôt',
                   style: TextStyle(
                       color: AppColors.textDim,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 1)),
               const SizedBox(height: 12),
-              const _Feature(Icons.lock_outline_rounded, 'Dossier privé',
-                  'Masqué de la galerie, visible dans l\'app'),
               const _Feature(Icons.undo_rounded, 'Annuler le dernier tri',
                   'Remet les photos à leur place'),
               const _Feature(Icons.tune_rounded, 'Dossiers personnalisés',
@@ -163,36 +172,42 @@ class _Feature extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
-  const _Feature(this.icon, this.title, this.subtitle);
+  final VoidCallback? onTap;
+  const _Feature(this.icon, this.title, this.subtitle, {this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0x331B2440),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: AppColors.accent2),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: const TextStyle(
-                        color: AppColors.text, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 2),
-                Text(subtitle,
-                    style: const TextStyle(
-                        color: AppColors.textDim, fontSize: 13)),
-              ],
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: onTap == null ? const Color(0x331B2440) : AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: AppColors.accent2),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: const TextStyle(
+                          color: AppColors.text, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 2),
+                  Text(subtitle,
+                      style: const TextStyle(
+                          color: AppColors.textDim, fontSize: 13)),
+                ],
+              ),
             ),
-          ),
-        ],
+            if (onTap != null)
+              const Icon(Icons.chevron_right_rounded, color: AppColors.textDim),
+          ],
+        ),
       ),
     );
   }
