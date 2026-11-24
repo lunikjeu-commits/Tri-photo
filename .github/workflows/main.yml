@@ -44,7 +44,7 @@ jobs:
                   open(g, 'w', encoding='utf-8').write(t)
           EOF
       - run: flutter pub get
-      - run: flutter build apk --release
+      - run: flutter build apk --release --no-shrink
       - name: Vérifier qu'il n'y a aucun accès Internet
         run: |
           F=$(find build -path '*merged_manifests*' -path '*release*' -name AndroidManifest.xml | head -1)
