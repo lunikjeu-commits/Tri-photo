@@ -1,0 +1,47 @@
+name: Build APK
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Générer le projet Android
+        run: flutter create --platforms=android --org com.lunikapp --project-name tri_photos .
+      - name: Config Android (permissions, minSdk, nom)
+        run: |
+          python3 - <<'EOF'
+          import os, re
+          p = 'android/app/src/main/AndroidManifest.xml'
+          s = open(p, encoding='utf-8').read()
+          perms = ''.join(
+              f'\n    <uses-permission android:name="android.permission.{x}"/>'
+              for x in ['MANAGE_EXTERNAL_STORAGE', 'READ_MEDIA_IMAGES',
+                        'READ_EXTERNAL_STORAGE', 'WRITE_EXTERNAL_STORAGE'])
+          i = s.index('>', s.index('<manifest')) + 1
+          s = s[:i] + perms + s[i:]
+          s = re.sub(r'android:label="[^"]*"', 'android:label="Tri Photos"', s)
+          open(p, 'w', encoding='utf-8').write(s)
+          for g in ['android/app/build.gradle.kts', 'android/app/build.gradle']:
+              if os.path.exists(g):
+                  t = open(g, encoding='utf-8').read()
+                  t = t.replace('flutter.minSdkVersion', '24')
+                  open(g, 'w', encoding='utf-8').write(t)
+          EOF
+      - run: flutter pub get
+      - run: flutter build apk --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tri-photos-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
