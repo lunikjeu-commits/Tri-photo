@@ -40,7 +40,7 @@ jobs:
           for g in ['android/app/build.gradle.kts', 'android/app/build.gradle']:
               if os.path.exists(g):
                   t = open(g, encoding='utf-8').read()
-                  t = t.replace('flutter.minSdkVersion', '24')
+                  t = t.replace('flutter.minSdkVersion', '26')
                   if g.endswith('.kts'):
                       t = t.replace('release {', 'release {\n            isMinifyEnabled = false\n            isShrinkResources = false', 1)
                   else:
