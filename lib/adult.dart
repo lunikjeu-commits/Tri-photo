@@ -6,6 +6,8 @@ const double kAdultThreshold = 0.7; // plus haut = moins sensible
 
 class AdultDetector {
   bool _ready = false;
+  int errors = 0;
+  String? lastError;
 
   bool get ready => _ready;
 
@@ -13,8 +15,9 @@ class AdultDetector {
     try {
       await FlutterNsfwDetector.initialize();
       _ready = true;
-    } catch (_) {
+    } catch (e) {
       _ready = false;
+      lastError = e.toString();
     }
   }
 
@@ -24,7 +27,9 @@ class AdultDetector {
       final r = await FlutterNsfwDetector.scanImage(file: f);
       final score = (r.nsfwScore as num?) ?? 0;
       return score >= kAdultThreshold;
-    } catch (_) {
+    } catch (e) {
+      errors++;
+      lastError ??= e.toString();
       return false;
     }
   }
