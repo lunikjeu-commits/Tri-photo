@@ -19,7 +19,7 @@ jobs:
           cache: true
       - name: Générer le projet Android
         run: flutter create --platforms=android --org com.lunikapp --project-name tri_photos .
-      - name: Config Android (permissions, sans Internet, minSdk, sans R8)
+      - name: Config Android (permissions, sans Internet, minSdk, sans R8, JVM)
         run: |
           python3 - <<'EOF'
           import os, re
@@ -46,6 +46,12 @@ jobs:
                   else:
                       t = t.replace('release {', 'release {\n            minifyEnabled false\n            shrinkResources false', 1)
                   open(g, 'w', encoding='utf-8').write(t)
+          gp = 'android/gradle.properties'
+          if os.path.exists(gp):
+              t = open(gp, encoding='utf-8').read()
+              if 'kotlin.jvm.target.validation.mode' not in t:
+                  t += '\nkotlin.jvm.target.validation.mode=warning\n'
+              open(gp, 'w', encoding='utf-8').write(t)
           EOF
       - run: flutter pub get
       - run: flutter build apk --release --no-shrink
