@@ -59,10 +59,6 @@ class SortJob extends ChangeNotifier {
     _begin(SortStep.analysing, rest.length);
     final adult = AdultDetector();
     await adult.init();
-    if (!adult.ready) {
-      warning =
-          'Détection « Adultes » indisponible : ces photos sont rangées par contenu.';
-    }
     final clf = Classifier();
     for (final f in rest) {
       if (_stop || _disposed) break;
@@ -80,7 +76,28 @@ class SortJob extends ChangeNotifier {
     }
     await clf.close();
     if (_disposed) return;
+    warning = _notes(adult, clf);
     step = SortStep.results;
     _tick();
+  }
+
+  String? _notes(AdultDetector adult, Classifier clf) {
+    final notes = <String>[];
+    if (!adult.ready) {
+      notes.add(
+          'Détection « Adultes » indisponible : ces photos sont rangées par contenu.');
+    }
+    if (clf.errors > 0) {
+      final e = clf.lastError ?? '';
+      final short = e.length > 80 ? e.substring(0, 80) : e;
+      notes.add('${clf.errors} photos non lues par l\'analyse. $short');
+    }
+    final top = clf.unmatched.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    if (top.isNotEmpty) {
+      final list = top.take(15).map((e) => '${e.key} (${e.value})').join(', ');
+      notes.add('Étiquettes vues dans « À vérifier » : $list');
+    }
+    return notes.isEmpty ? null : notes.join('\n');
   }
 }
