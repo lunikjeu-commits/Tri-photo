@@ -9,6 +9,13 @@ import 'thumb.dart';
 
 enum SortStep { scanning, duplicates, analysing, results }
 
+class _Item {
+  final File file;
+  final double score; // -1 si la photo n'a pas pu être lue
+  final String fallback; // dossier si elle n'est pas « Adultes »
+  const _Item(this.file, this.score, this.fallback);
+}
+
 class SortJob extends ChangeNotifier {
   final bool includeChats;
   SortJob({required this.includeChats});
@@ -16,13 +23,25 @@ class SortJob extends ChangeNotifier {
   SortStep step = SortStep.scanning;
   int done = 0, total = 0;
   String? warning;
+  double adultThreshold = kDefaultAdultThreshold;
+  Map<String, List<File>> plan = {};
+
   bool _stop = false;
   bool _disposed = false;
-  final Map<String, List<File>> plan = {};
+  final List<_Item> _items = [];
+  final List<File> _copies = [];
+  final Map<String, String> _copyOf = {};
+  final Map<String, double> _score = {};
 
   int get count => plan.values.fold(0, (a, l) => a + l.length);
 
   void stop() => _stop = true;
+
+  void setThreshold(double v) {
+    adultThreshold = v;
+    _rebuild();
+    _tick();
+  }
 
   @override
   void dispose() {
@@ -42,20 +61,34 @@ class SortJob extends ChangeNotifier {
     _tick();
   }
 
+  void _rebuild() {
+    final out = <String, List<File>>{};
+    for (final it in _items) {
+      final cat = it.score >= adultThreshold ? kAdults : it.fallback;
+      out.putIfAbsent(cat, () => []).add(it.file);
+    }
+    for (final c in _copies) {
+      final orig = _copyOf[c.path];
+      final adult = orig != null && (_score[orig] ?? -1) >= adultThreshold;
+      out.putIfAbsent(adult ? kAdults : kDuplicates, () => []).add(c);
+    }
+    plan = out;
+  }
+
   Future<void> run() async {
     final files = await scanImages(includeChats: includeChats);
     if (_disposed) return;
 
     _begin(SortStep.duplicates, files.length);
-    final copies = await findDuplicates(files, onProgress: (d, t) {
+    final copyOf = await findDuplicates(files, onProgress: (d, t) {
       done = d;
       total = t;
       if (d % 10 == 0 || d == t) _tick();
     });
     if (_disposed) return;
-    if (copies.isNotEmpty) plan[kDuplicates] = copies;
-    final copySet = copies.map((f) => f.path).toSet();
-    final rest = files.where((f) => !copySet.contains(f.path)).toList();
+    _copyOf.addAll(copyOf);
+    _copies.addAll(files.where((f) => copyOf.containsKey(f.path)));
+    final rest = files.where((f) => !copyOf.containsKey(f.path)).toList();
 
     _begin(SortStep.analysing, rest.length);
     final adult = AdultDetector();
@@ -64,15 +97,16 @@ class SortJob extends ChangeNotifier {
     for (final f in rest) {
       if (_stop || _disposed) break;
       final t = await loadThumb(f);
-      final String cat;
-      if (t != null && await adult.isAdult(t)) {
-        cat = kAdults;
-      } else if (t != null && isBlurry(f.path, t)) {
-        cat = kBlurry;
+      double score = -1;
+      final String fallback;
+      if (t != null) {
+        score = await adult.score(t) ?? -1;
+        fallback = isBlurry(f.path, t) ? kBlurry : await clf.classify(f);
       } else {
-        cat = await clf.classify(f);
+        fallback = await clf.classify(f);
       }
-      plan.putIfAbsent(cat, () => []).add(f);
+      _score[f.path] = score;
+      _items.add(_Item(f, score, fallback));
       done++;
       if (done % 5 == 0 || done == total) _tick();
     }
@@ -81,6 +115,7 @@ class SortJob extends ChangeNotifier {
     adult.close();
     if (_disposed) return;
     warning = notes;
+    _rebuild();
     step = SortStep.results;
     _tick();
   }
@@ -92,13 +127,10 @@ class SortJob extends ChangeNotifier {
     if (!adult.ready) {
       notes.add(
           'Détection « Adultes » indisponible : ${_cut(adult.lastError ?? '', 150)}');
-    } else if (adult.scanned > 0) {
-      var s =
-          'Détecteur « Adultes » : ${adult.scanned} photos vérifiées, score max ${adult.maxScore.toStringAsFixed(2)}';
-      if (adult.questionable > 0) {
-        s += ', ${adult.questionable} douteuses (0,35 à 0,5)';
-      }
-      notes.add('$s.');
+    } else {
+      final b = adult.bands;
+      notes.add(
+          'Scores « Adultes » : <0,2 : ${b[0]} · 0,2–0,35 : ${b[1]} · 0,35–0,5 : ${b[2]} · 0,5–0,7 : ${b[3]} · 0,7–0,9 : ${b[4]} · ≥0,9 : ${b[5]}');
     }
     if (adult.errors > 0) {
       notes.add(
