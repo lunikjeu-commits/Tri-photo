@@ -1,8 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'adult.dart';
 import 'categories.dart';
 import 'folder_icons.dart';
 import 'mover.dart';
+import 'sort_views.dart';
 import 'sorter.dart';
 import 'theme.dart';
 
@@ -115,39 +117,50 @@ class _SortScreenState extends State<SortScreen> {
   }
 
   Widget _body() {
-    if (_finished) return _finishedView();
+    if (_finished) return FinishedView(result: _result);
     if (_moving) {
-      return _progress('Déplacement $_mDone / $_mTotal',
-          _mTotal == 0 ? null : _mDone / _mTotal, false);
+      return ProgressView(
+          text: 'Déplacement $_mDone / $_mTotal',
+          value: _mTotal == 0 ? null : _mDone / _mTotal);
     }
     return switch (_job.step) {
-      SortStep.scanning => _progress('Recherche des photos…', null, false),
+      SortStep.scanning => const ProgressView(text: 'Recherche des photos…'),
       SortStep.duplicates =>
-        _progress('Recherche des doublons…', _ratio, false),
-      SortStep.analysing =>
-        _progress('Analyse ${_job.done} / ${_job.total}', _ratio, true),
+        ProgressView(text: 'Recherche des doublons…', value: _ratio),
+      SortStep.analysing => ProgressView(
+          text: 'Analyse ${_job.done} / ${_job.total}',
+          value: _ratio,
+          onStop: _job.stop),
       SortStep.results => _results(),
     };
   }
 
-  Widget _progress(String text, double? value, bool canStop) {
-    return Center(
+  Widget _sensitivity() {
+    final n = _job.plan[kAdults]?.length ?? 0;
+    return Container(
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.fromLTRB(16, 10, 8, 4),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          LinearProgressIndicator(value: value, minHeight: 8),
-          const SizedBox(height: 20),
-          Text(text,
-              style: const TextStyle(color: AppColors.text, fontSize: 16)),
-          const SizedBox(height: 8),
-          const Text('Laisse l\'écran allumé',
-              style: TextStyle(color: AppColors.textDim)),
-          if (canStop) ...[
-            const SizedBox(height: 24),
-            OutlinedButton(
-                onPressed: _job.stop,
-                child: const Text('Arrêter et voir le résultat')),
-          ],
+          Text(
+              'Sensibilité « Adultes » : seuil ${_job.adultThreshold.toStringAsFixed(2)} → $n photos',
+              style: const TextStyle(
+                  color: AppColors.text, fontWeight: FontWeight.w600)),
+          Slider(
+            value: _job.adultThreshold,
+            min: 0.05,
+            max: 0.95,
+            divisions: 90,
+            onChanged: (v) => _job.setThreshold(v),
+          ),
+          const Text('Plus bas = plus de photos classées Adultes',
+              style: TextStyle(color: AppColors.textDim, fontSize: 12)),
+          const SizedBox(height: 6),
         ],
       ),
     );
@@ -177,6 +190,7 @@ class _SortScreenState extends State<SortScreen> {
               textAlign: TextAlign.center,
               style: const TextStyle(color: Color(0xFFFFB74D), fontSize: 13)),
         ],
+        _sensitivity(),
         Align(
           alignment: Alignment.centerRight,
           child: TextButton.icon(
@@ -235,39 +249,6 @@ class _SortScreenState extends State<SortScreen> {
           }),
         ),
       ]),
-    );
-  }
-
-  Widget _finishedView() {
-    final r = _result;
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.check_circle_rounded,
-              color: Color(0xFF66D9A0), size: 64),
-          const SizedBox(height: 16),
-          Text('${r?.moved ?? 0} photos déplacées',
-              style: const TextStyle(
-                  color: AppColors.text,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700)),
-          const SizedBox(height: 8),
-          const Text('Dossier : Pictures/LC_Tri',
-              style: TextStyle(color: AppColors.textDim)),
-          if ((r?.failed ?? 0) > 0)
-            Text('${r!.failed} non déplacées',
-                style: const TextStyle(color: Color(0xFFFFB74D))),
-          const SizedBox(height: 8),
-          const Text('La galerie est rafraîchie. Tu peux annuler ce tri depuis l\'historique.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textDim)),
-          const SizedBox(height: 24),
-          FilledButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Terminer')),
-        ],
-      ),
     );
   }
 }
