@@ -92,6 +92,13 @@ class SortJob extends ChangeNotifier {
     if (!adult.ready) {
       notes.add(
           'Détection « Adultes » indisponible : ${_cut(adult.lastError ?? '', 150)}');
+    } else if (adult.scanned > 0) {
+      var s =
+          'Détecteur « Adultes » : ${adult.scanned} photos vérifiées, score max ${adult.maxScore.toStringAsFixed(2)}';
+      if (adult.questionable > 0) {
+        s += ', ${adult.questionable} douteuses (0,35 à 0,5)';
+      }
+      notes.add('$s.');
     }
     if (adult.errors > 0) {
       notes.add(
