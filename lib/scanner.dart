@@ -4,11 +4,12 @@ const kOutputRoot = '/storage/emulated/0/Pictures/LC_Tri';
 
 const _base = '/storage/emulated/0';
 const _roots = ['$_base/DCIM', '$_base/Pictures', '$_base/Download'];
-const _chatRoots = [
-  '$_base/Android/media/com.whatsapp/WhatsApp/Media',
-  '$_base/Android/media/com.whatsapp.w4b/WhatsApp Business/Media',
-  '$_base/WhatsApp/Media',
+
+// Option « Inclure Telegram » (WhatsApp n'est jamais analysé).
+const _telegramRoots = [
   '$_base/Telegram',
+  '$_base/Android/media/org.telegram.messenger/Telegram',
+  '$_base/Android/media/org.telegram.messenger.web/Telegram',
 ];
 const _exts = [
   '.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif', '.gif', '.bmp',
@@ -16,7 +17,7 @@ const _exts = [
 
 Future<List<File>> scanImages({bool includeChats = false}) async {
   final out = <File>[];
-  for (final r in [..._roots, if (includeChats) ..._chatRoots]) {
+  for (final r in [..._roots, if (includeChats) ..._telegramRoots]) {
     await _walk(Directory(r), out);
   }
   return out;
@@ -29,7 +30,8 @@ Future<void> _walk(Directory d, List<File> out) async {
       if (name.startsWith('.')) continue;
       if (e is Directory) {
         if (e.path == kOutputRoot) continue;
-        if (name.toLowerCase().contains('sticker')) continue;
+        final low = name.toLowerCase();
+        if (low.contains('sticker') || low.contains('whatsapp')) continue;
         await _walk(e, out);
       } else if (e is File) {
         final low = name.toLowerCase();
