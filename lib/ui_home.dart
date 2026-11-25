@@ -13,7 +13,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _granted = false;
-  bool _includeChats = false;
+  bool _includeChats = false; // = inclure Telegram
 
   @override
   void initState() {
@@ -131,11 +131,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       child: SwitchListTile(
         value: _includeChats,
         onChanged: (v) => setState(() => _includeChats = v),
-        title: const Text('Inclure WhatsApp et Telegram',
+        title: const Text('Inclure Telegram',
             style:
                 TextStyle(color: AppColors.text, fontWeight: FontWeight.w600)),
         subtitle: const Text(
-            'Attention : les photos déplacées disparaissent des conversations.',
+            'Les photos déplacées disparaissent des conversations (Telegram les retélécharge en général).',
             style: TextStyle(color: AppColors.textDim, fontSize: 13)),
       ),
     );
