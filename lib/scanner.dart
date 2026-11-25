@@ -20,6 +20,16 @@ Future<List<File>> scanImages({bool includeChats = false}) async {
   for (final r in [..._roots, if (includeChats) ..._telegramRoots]) {
     await _walk(Directory(r), out);
   }
+  // Les plus récentes d'abord (utile si tu arrêtes l'analyse en route).
+  final times = <String, int>{};
+  for (final f in out) {
+    try {
+      times[f.path] = f.lastModifiedSync().millisecondsSinceEpoch;
+    } catch (_) {
+      times[f.path] = 0;
+    }
+  }
+  out.sort((a, b) => times[b.path]!.compareTo(times[a.path]!));
   return out;
 }
 
