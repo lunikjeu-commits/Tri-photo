@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'adult.dart';
+import 'media_scan.dart';
 import 'scanner.dart';
 import 'theme.dart';
 
@@ -55,12 +56,13 @@ class _PrivateScreenState extends State<PrivateScreen> {
       } else {
         await f.create(recursive: true);
       }
+      await rescanGallery(_files.map((x) => x.path));
       setState(() => _hidden = !_hidden);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(_hidden
-            ? 'Dossier masqué. La galerie se met à jour au prochain rafraîchissement.'
-            : 'Dossier visible. La galerie peut mettre un moment à l\'afficher.'),
+            ? 'Dossier masqué. Galerie rafraîchie.'
+            : 'Dossier visible. Galerie rafraîchie.'),
       ));
     } catch (_) {}
   }
