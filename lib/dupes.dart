@@ -3,7 +3,8 @@ import 'package:crypto/crypto.dart';
 
 const kDuplicates = 'Doublons';
 
-Future<List<File>> findDuplicates(
+/// Renvoie { chemin de la copie : chemin de l'original }.
+Future<Map<String, String>> findDuplicates(
   List<File> files, {
   void Function(int done, int total)? onProgress,
 }) async {
@@ -16,7 +17,7 @@ Future<List<File>> findDuplicates(
   final groups = bySize.values.where((g) => g.length > 1).toList();
   final total = groups.fold<int>(0, (a, g) => a + g.length);
   var done = 0;
-  final copies = <File>[];
+  final copyOf = <String, String>{};
 
   for (final g in groups) {
     final byHash = <String, List<File>>{};
@@ -35,10 +36,13 @@ Future<List<File>> findDuplicates(
         final c = times[a.path]!.compareTo(times[b.path]!);
         return c != 0 ? c : a.path.length.compareTo(b.path.length);
       });
-      copies.addAll(same.skip(1));
+      final orig = same.first.path;
+      for (final c in same.skip(1)) {
+        copyOf[c.path] = orig;
+      }
     }
   }
-  return copies;
+  return copyOf;
 }
 
 DateTime _mtime(File f) {
