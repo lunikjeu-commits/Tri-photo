@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'theme.dart';
+import 'ui_history.dart';
 import 'ui_private.dart';
 import 'ui_sort.dart';
 
@@ -43,17 +44,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     await _check();
   }
 
-  void _openSort() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-          builder: (_) => SortScreen(includeChats: _includeChats)),
-    );
-  }
-
-  void _openPrivate() {
-    Navigator.push(
-        context, MaterialPageRoute(builder: (_) => const PrivateScreen()));
+  void _go(Widget screen) {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
   }
 
   void _about() {
@@ -90,7 +82,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               SizedBox(
                 height: 56,
                 child: FilledButton.icon(
-                  onPressed: _granted ? _openSort : _ask,
+                  onPressed: _granted
+                      ? () => _go(SortScreen(includeChats: _includeChats))
+                      : _ask,
                   icon: Icon(_granted
                       ? Icons.auto_awesome_rounded
                       : Icons.lock_open_rounded),
@@ -100,10 +94,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
               ),
               const SizedBox(height: 20),
-              if (_granted)
+              if (_granted) ...[
                 _Feature(Icons.visibility_off_rounded, 'Dossier privé',
                     'Voir le dossier « Adultes » (masqué de la galerie)',
-                    onTap: _openPrivate),
+                    onTap: () => _go(const PrivateScreen())),
+                _Feature(Icons.undo_rounded, 'Historique et annulation',
+                    'Annuler un tri : les photos reviennent à leur place',
+                    onTap: () => _go(const HistoryScreen())),
+              ],
               const SizedBox(height: 18),
               const Text('Bientôt',
                   style: TextStyle(
@@ -111,8 +109,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       fontWeight: FontWeight.w600,
                       letterSpacing: 1)),
               const SizedBox(height: 12),
-              const _Feature(Icons.undo_rounded, 'Annuler le dernier tri',
-                  'Remet les photos à leur place'),
               const _Feature(Icons.tune_rounded, 'Dossiers personnalisés',
                   'Tu choisis les catégories'),
             ],
