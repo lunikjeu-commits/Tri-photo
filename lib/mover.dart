@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 import 'adult.dart';
+import 'fs_utils.dart';
+import 'media_scan.dart';
 import 'scanner.dart';
 
 class MoveResult {
@@ -13,10 +15,13 @@ Future<MoveResult> moveAll(
   Map<String, List<File>> plan, {
   void Function(int done, int total)? onProgress,
 }) async {
-  await Directory(kOutputRoot).create(recursive: true);
-  final sink =
-      File('$kOutputRoot/.journal.jsonl').openWrite(mode: FileMode.append);
+  final jdir = Directory('$kOutputRoot/.journals');
+  await jdir.create(recursive: true);
+  final journal =
+      File('${jdir.path}/run_${DateTime.now().millisecondsSinceEpoch}.jsonl');
+  final sink = journal.openWrite();
   final total = plan.values.fold<int>(0, (a, l) => a + l.length);
+  final touched = <String>[];
   int moved = 0, failed = 0, done = 0;
 
   for (final entry in plan.entries) {
@@ -27,50 +32,27 @@ Future<MoveResult> moveAll(
     }
     for (final f in entry.value) {
       try {
-        final dest = _uniquePath(dir.path, f.path.split('/').last);
-        await _move(f, dest);
-        sink.writeln(jsonEncode({
-          'from': f.path,
-          'to': dest,
-          't': DateTime.now().toIso8601String(),
-        }));
+        final dest = uniquePath(dir.path, f.path.split('/').last);
+        await moveFile(f, dest);
+        sink.writeln(jsonEncode({'from': f.path, 'to': dest}));
+        touched.add(f.path);
+        touched.add(dest);
         moved++;
       } catch (_) {
         failed++;
       }
       done++;
+      if (done % 25 == 0) await sink.flush();
       onProgress?.call(done, total);
     }
   }
   await sink.flush();
   await sink.close();
+  if (moved == 0) {
+    try {
+      await journal.delete();
+    } catch (_) {}
+  }
+  await rescanGallery(touched);
   return MoveResult(moved, failed);
-}
-
-String _uniquePath(String dir, String name) {
-  var path = '$dir/$name';
-  if (!File(path).existsSync()) return path;
-  final dot = name.lastIndexOf('.');
-  final base = dot > 0 ? name.substring(0, dot) : name;
-  final ext = dot > 0 ? name.substring(dot) : '';
-  var i = 1;
-  while (File(path).existsSync()) {
-    path = '$dir/${base}_$i$ext';
-    i++;
-  }
-  return path;
-}
-
-Future<void> _move(File src, String dest) async {
-  try {
-    await src.rename(dest);
-  } on FileSystemException {
-    final copy = await src.copy(dest);
-    if (await copy.length() == await src.length()) {
-      await src.delete();
-    } else {
-      await copy.delete();
-      throw const FileSystemException('copie incomplète');
-    }
-  }
 }
