@@ -19,10 +19,10 @@ jobs:
           cache: true
       - name: Générer le projet Android
         run: flutter create --platforms=android --org com.lunikapp --project-name tri_photos .
-      - name: Config Android (permissions, sans Internet, minSdk, sans R8, JVM)
+      - name: Config Android (permissions, sans Internet, minSdk, sans R8, JVM, rescan)
         run: |
           python3 - <<'EOF'
-          import os, re
+          import os, re, glob
           p = 'android/app/src/main/AndroidManifest.xml'
           s = open(p, encoding='utf-8').read()
           if 'xmlns:tools' not in s:
@@ -52,6 +52,39 @@ jobs:
               if 'kotlin.jvm.target.validation.mode' not in t:
                   t += '\nkotlin.jvm.target.validation.mode=warning\n'
               open(gp, 'w', encoding='utf-8').write(t)
+          acts = glob.glob('android/app/src/main/kotlin/**/MainActivity.kt', recursive=True)
+          if acts:
+              a = acts[0]
+              first = open(a, encoding='utf-8').readline().strip()
+              kt = first + '''
+
+          import android.media.MediaScannerConnection
+          import io.flutter.embedding.android.FlutterActivity
+          import io.flutter.embedding.engine.FlutterEngine
+          import io.flutter.plugin.common.MethodChannel
+
+          class MainActivity : FlutterActivity() {
+              override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+                  super.configureFlutterEngine(flutterEngine)
+                  MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "lc/media")
+                      .setMethodCallHandler { call, result ->
+                          if (call.method == "scan") {
+                              val paths = call.argument<List<String>>("paths") ?: emptyList()
+                              if (paths.isNotEmpty()) {
+                                  MediaScannerConnection.scanFile(
+                                      applicationContext, paths.toTypedArray(), null, null)
+                              }
+                              result.success(paths.size)
+                          } else {
+                              result.notImplemented()
+                          }
+                      }
+              }
+          }
+          '''
+              import textwrap
+              kt = first + '\n' + textwrap.dedent(kt[len(first):])
+              open(a, 'w', encoding='utf-8').write(kt)
           EOF
       - run: flutter pub get
       - run: flutter build apk --release --no-shrink
