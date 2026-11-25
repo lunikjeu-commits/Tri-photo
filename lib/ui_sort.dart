@@ -1,28 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'adult.dart';
-import 'blur.dart';
 import 'categories.dart';
-import 'dupes.dart';
+import 'folder_icons.dart';
 import 'mover.dart';
 import 'sorter.dart';
 import 'theme.dart';
-
-const _icons = <String, IconData>{
-  'Voitures': Icons.directions_car_rounded,
-  'Personnes': Icons.people_rounded,
-  'Nourriture': Icons.restaurant_rounded,
-  'Animaux': Icons.pets_rounded,
-  'Paysages': Icons.landscape_rounded,
-  'Documents': Icons.description_rounded,
-  'Bâtiments': Icons.apartment_rounded,
-  'Maison': Icons.chair_rounded,
-  'Sport': Icons.sports_soccer_rounded,
-  kToCheck: Icons.help_outline_rounded,
-  kDuplicates: Icons.content_copy_rounded,
-  kBlurry: Icons.blur_on_rounded,
-  kAdults: Icons.visibility_off_rounded,
-};
 
 class SortScreen extends StatefulWidget {
   final bool includeChats;
@@ -65,13 +47,25 @@ class _SortScreenState extends State<SortScreen> {
 
   double? get _ratio => _job.total == 0 ? null : _job.done / _job.total;
 
+  bool get _allOn => _excluded.isEmpty;
+
+  void _toggleAll() {
+    setState(() {
+      if (_allOn) {
+        _excluded.addAll(_job.plan.keys);
+      } else {
+        _excluded.clear();
+      }
+    });
+  }
+
   Future<void> _confirmMove() async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
         title: const Text('Déplacer les photos ?'),
         content: Text(
-            '$_selCount photos seront déplacées dans Pictures/LC_Tri. Un journal est conservé pour pouvoir annuler plus tard.'),
+            '$_selCount photos seront déplacées dans Pictures/LC_Tri. Tu pourras annuler ce tri depuis l\'historique.'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(c, false),
@@ -183,7 +177,16 @@ class _SortScreenState extends State<SortScreen> {
               textAlign: TextAlign.center,
               style: const TextStyle(color: Color(0xFFFFB74D), fontSize: 13)),
         ],
-        const SizedBox(height: 14),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            onPressed: _toggleAll,
+            icon: Icon(_allOn
+                ? Icons.check_box_outline_blank_rounded
+                : Icons.check_box_rounded),
+            label: Text(_allOn ? 'Tout décocher' : 'Tout cocher'),
+          ),
+        ),
         Expanded(
           child: ListView(
             children: [for (final e in entries) _row(e.key, e.value.length)],
@@ -213,7 +216,7 @@ class _SortScreenState extends State<SortScreen> {
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(children: [
-        Icon(_icons[name] ?? Icons.folder_rounded,
+        Icon(iconForFolder(name),
             color: name == kToCheck
                 ? const Color(0xFFFFB74D)
                 : (on ? AppColors.accent : AppColors.textDim)),
@@ -256,7 +259,7 @@ class _SortScreenState extends State<SortScreen> {
             Text('${r!.failed} non déplacées',
                 style: const TextStyle(color: Color(0xFFFFB74D))),
           const SizedBox(height: 8),
-          const Text('La galerie peut mettre un moment à se mettre à jour.',
+          const Text('La galerie est rafraîchie. Tu peux annuler ce tri depuis l\'historique.',
               textAlign: TextAlign.center,
               style: TextStyle(color: AppColors.textDim)),
           const SizedBox(height: 24),
