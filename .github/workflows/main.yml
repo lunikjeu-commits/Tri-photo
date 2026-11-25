@@ -86,6 +86,47 @@ jobs:
               kt = first + '\n' + textwrap.dedent(kt[len(first):])
               open(a, 'w', encoding='utf-8').write(kt)
           EOF
+      - name: Icône LC STUDIO (optionnelle)
+        continue-on-error: true
+        run: |
+          pip install --break-system-packages pillow || true
+          python3 - <<'EOF'
+          import os, math
+          from PIL import Image, ImageDraw
+          S = 1024
+          img = Image.new('RGB', (S, S))
+          d = ImageDraw.Draw(img)
+          top, bot = (11, 18, 38), (22, 30, 56)
+          for y in range(S):
+              t = y / (S - 1)
+              d.line([(0, y), (S, y)], fill=tuple(int(top[i] + (bot[i] - top[i]) * t) for i in range(3)))
+          accent = (79, 195, 247)
+          B = 0.56 * S
+          ox = oy = 0.22 * S
+          d.rounded_rectangle([ox, oy, ox + B, oy + B], radius=0.28 * B,
+                              outline=accent, width=int(0.04 * B))
+          w = int(0.075 * B)
+          def pt(x, y): return (ox + x * B, oy + y * B)
+          def dot(p):
+              d.ellipse([p[0] - w / 2, p[1] - w / 2, p[0] + w / 2, p[1] + w / 2], fill=accent)
+          a, b, c = pt(0.30, 0.26), pt(0.30, 0.72), pt(0.54, 0.72)
+          d.line([a, b, c], fill=accent, width=w, joint='curve')
+          for p in (a, b, c): dot(p)
+          cx, cy = pt(0.60, 0.49)
+          r = 0.21 * B
+          d.arc([cx - r, cy - r, cx + r, cy + r], start=45, end=315, fill=accent, width=w)
+          for deg in (45, 315):
+              dot((cx + r * math.cos(math.radians(deg)), cy + r * math.sin(math.radians(deg))))
+          mask = Image.new('L', (S, S), 0)
+          ImageDraw.Draw(mask).rounded_rectangle([0, 0, S, S], radius=int(0.22 * S), fill=255)
+          img = img.convert('RGBA')
+          img.putalpha(mask)
+          sizes = {'mdpi': 48, 'hdpi': 72, 'xhdpi': 96, 'xxhdpi': 144, 'xxxhdpi': 192}
+          for name, size in sizes.items():
+              folder = f'android/app/src/main/res/mipmap-{name}'
+              if os.path.isdir(folder):
+                  img.resize((size, size), Image.LANCZOS).save(f'{folder}/ic_launcher.png')
+          EOF
       - run: flutter pub get
       - run: flutter build apk --release --no-shrink
       - name: Vérifier qu'il n'y a aucun accès Internet
